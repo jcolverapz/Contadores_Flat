@@ -1,0 +1,9 @@
+
+                'CorteLineal
+                
+                            'If CorteLineal = False Then
+                             '   CNN.rsCmdUpdateConteos!PzsOK = CNN.rsCmdUpdateConteos!PzsOK + (PxH)
+                            'Else
+                             '   CNN.rsCmdUpdateConteos!PzsOK = CNN.rsCmdUpdateConteos!PzsOK + (PxH / 2)
+                            'End If
+                            

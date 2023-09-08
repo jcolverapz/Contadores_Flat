@@ -1,0 +1,45 @@
+ Private Sub InitUL()
+
+        Dim ULStat As MccDaq.ErrorInfo
+
+        ' declare revision level of Universal Library
+
+        ULStat = MccDaq.MccService.DeclareRevision(MccDaq.MccService.CurrentRevNum)
+
+        ' Initiate error handling
+        '  activating error handling will trap errors like
+        '  bad channel numbers and non-configured conditions.
+        '  Parameters:
+        '    MccDaq.ErrorReporting.PrintAll :all warnings and errors encountered will be printed
+        '    MccDaq.ErrorHandling.StopAll   :if any error is encountered, the program will stop
+
+
+        ReportError = MccDaq.ErrorReporting.PrintAll
+        HandleError = MccDaq.ErrorHandling.StopAll
+        ULStat = MccDaq.MccService.ErrHandling(ReportError, HandleError)
+        If ULStat.Value <> MccDaq.ErrorInfo.ErrorCode.NoErrors Then
+            Stop
+        End If
+
+        lblBitNum = New System.Windows.Forms.Label(8) {}
+        Me.lblBitNum.SetValue(Me._lblBitNum_7, 7)
+        Me.lblBitNum.SetValue(Me._lblBitNum_6, 6)
+        Me.lblBitNum.SetValue(Me._lblBitNum_5, 5)
+        Me.lblBitNum.SetValue(Me._lblBitNum_4, 4)
+        Me.lblBitNum.SetValue(Me._lblBitNum_3, 3)
+        Me.lblBitNum.SetValue(Me._lblBitNum_2, 2)
+        Me.lblBitNum.SetValue(Me._lblBitNum_1, 1)
+        Me.lblBitNum.SetValue(Me._lblBitNum_0, 0)
+
+
+        lblBitVal = New System.Windows.Forms.Label(8) {}
+        Me.lblBitVal.SetValue(Me._lblBitVal_0, 0)
+        Me.lblBitVal.SetValue(Me._lblBitVal_1, 1)
+        Me.lblBitVal.SetValue(Me._lblBitVal_2, 2)
+        Me.lblBitVal.SetValue(Me._lblBitVal_3, 3)
+        Me.lblBitVal.SetValue(Me._lblBitVal_4, 4)
+        Me.lblBitVal.SetValue(Me._lblBitVal_5, 5)
+        Me.lblBitVal.SetValue(Me._lblBitVal_6, 6)
+        Me.lblBitVal.SetValue(Me._lblBitVal_7, 7)
+
+    End Sub

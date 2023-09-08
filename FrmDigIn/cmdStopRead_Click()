@@ -1,0 +1,8 @@
+
+Private Sub cmdStopRead_Click()
+
+   tmrReadInputs.Enabled = False
+   End
+
+End Sub
+

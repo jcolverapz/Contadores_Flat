@@ -1,0 +1,73 @@
+Public Sub UltimoTicketxLinea(Fecha, CodLinea)
+On Error GoTo ErrHandler
+
+
+
+CNN.CmdEtiquetas ("A") ', (CodLinea)                    '("%3%")   '(CodLinea)    ', (Turno)
+
+If CNN.rsCmdEtiquetas.EOF <> True Then
+
+    TicketGem = CNN.rsCmdEtiquetas!TicketGem         '''  TicketGem = "161101"
+    IdJC = CNN.rsCmdEtiquetas!Oma_Id
+   ' OF = CNN.rsCmdEtiquetas!OF
+    CodLinea = CNN.rsCmdEtiquetas!CodLinea
+    'EsAcumulado = InStr(1, CNN.rsCmdUltimoTicketxLinea!descripcion, "Acumulado")
+    FechaUltimo = CNN.rsCmdEtiquetas!FechaHora ', "dd-mmm-yy") '& "   " & CNN.rsCmdUltimoTicketxLinea!HoraCap
+
+
+      'En Pantalla
+        Me.TxtJobCard(2).Text = IdJC
+        Me.TxtTicketMP(2).Text = TicketGem
+
+        Me.TxtNoParte(2).Text = NoParte
+       Me.lblfechaUltimo.Caption = FechaUltimo
+
+   ' CNN.CmdEtiquetas "A"
+    'If CNN.rsCmdEtiquetas.EOF = False Then
+     '   Me.lblfechaUltimo.Caption = CNN.rsCmdEtiquetas!FechaHora
+    'Else
+
+
+   ' End If
+   ' CNN.rsCmdEtiquetas.Close
+
+    '(-1) Ticket Escaneado
+'    If CNN.rsCmdUltimoTicketxLinea!IdHorario = -1 Then
+'            If CSng(Time) > 0.5 Then
+'                SQL = "SELECT IdHorario, HoraInicio, HoraTermino, Turno From TblHorariosHxH WHERE (HoraInicio <= '1/1/1900 " & Mid(CNN.rsCmdUltimoTicketxLinea!HoraIni, 1, 8) & " PM') AND (HoraTermino >= '1/1/1900 " & Mid(CNN.rsCmdUltimoTicketxLinea!HoraIni, 1, 8) & " PM')"
+'            Else
+'                SQL = "SELECT IdHorario, HoraInicio, HoraTermino, Turno From TblHorariosHxH WHERE (HoraInicio <= '1/1/1900 " & Mid(CNN.rsCmdUltimoTicketxLinea!HoraIni, 1, 8) & " AM') AND (HoraTermino >= '1/1/1900 " & Mid(CNN.rsCmdUltimoTicketxLinea!HoraIni, 1, 8) & " AM')"
+'            End If
+'
+'            ' TblHorariosHxH
+'            'Busca la Hora actual
+'            CNN.rsCmdIdHoraHxH.Open SQL
+'            If CNN.rsCmdIdHoraHxH.EOF <> True Then
+'                    IdHorario = CNN.rsCmdIdHoraHxH!IdHorario
+'            Else
+'                   ' MsgBox "No hay Horario definido."
+'            End If
+'            CNN.rsCmdIdHoraHxH.Close
+'
+'            'Tbl_OmaDet
+'            CNN.CmdBuscaDetOmaUpdate (IdJC), (TicketGem)
+'            If CNN.rsCmdBuscaDetOmaUpdate.EOF <> True Then
+'                        CNN.rsCmdBuscaDetOmaUpdate!IdHorario = IdHorario
+'                CNN.rsCmdBuscaDetOmaUpdate.Update
+'            Else
+'                MsgBox " ", vbInformation, "Sin Scaneos"
+'            End If
+'            CNN.rsCmdBuscaDetOmaUpdate.Close
+'    End If
+'Else
+ '   MsgBox "No hay contenedores scaneado en Corte.", vbInformation, "Sin Scaneos"
+CNN.rsCmdEtiquetas.Close
+    'Exit Sub
+End If
+'CNN.rsCmdUltimoTicketxLinea.Close
+
+ErrHandler:
+
+End Sub
+
+

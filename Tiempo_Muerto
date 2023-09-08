@@ -1,0 +1,201 @@
+Private Sub TmrColores_Timer()
+''''CodLinea = 10
+
+'If Len(frmDigIn.LblVariables.Text) > 4000 Then
+     'frmDigIn.LblVariables.Text = ""
+'End If
+'''CodLinea = 1
+
+TmrColores.Interval = 60000
+'''CodLinea = 221
+
+
+' Tiempo Muerto - TM
+
+'Tbl_DetOma Vs. Orden_Man Vs. TblHorariosHxH Vs. StdxLineaxHora
+CNN.CmdStdxNoParte (Fecha), (CodLinea), (Turno)
+If CNN.rsCmdStdxNoParte.EOF <> True Then
+     IdJC_TM2_5 = CNN.rsCmdStdxNoParte!Oma_Id
+     PzsxMinuto = (CNN.rsCmdStdxNoParte!pzsxhora / 60)
+     CicloxPzs = (60 / PzsxMinuto)
+
+     TiempoCicloxPzsx2_5 = (CicloxPzs * 2.5)
+
+     FraccionTiempo_2_5 = (((TiempoCicloxPzsx2_5) / 1440) / 60)
+'''     TmrColores.Interval = ((TiempoCicloxPzsx2_5 - 1) * 1000)
+'     If Len(frmDigIn.LblVariables.Text) > 2000 Then
+'          frmDigIn.LblVariables.Text = ""
+'     End If
+
+Else
+          'busca para AT
+          'CNN.CmdStdxNoParteAT (Fecha - 1), (CodLinea), (CodLinea), (Turno)
+          CNN.CmdStdxNoParteAT (Fecha), (CodLinea), (Turno)
+          If CNN.rsCmdStdxNoParteAT.EOF <> True Then
+               IdJC_TM2_5 = CNN.rsCmdStdxNoParteAT!Oma_Id
+               PzsxMinuto = (CNN.rsCmdStdxNoParteAT!pzsxhora / 60)
+               CicloxPzs = (60 / PzsxMinuto)
+               TiempoCicloxPzsx2_5 = (CicloxPzs * 2.5)
+               FraccionTiempo_2_5 = (((TiempoCicloxPzsx2_5) / 1440) / 60)
+         '''      TmrColores.Interval = ((TiempoCicloxPzsx2_5 - 1) * 1000)
+'               If Len(frmDigIn.LblVariables.Text) > 2000 Then
+'                    frmDigIn.LblVariables.Text = ""
+'               End If
+          Else
+                    If CNN.rsCmdStdxNoParte.State = 1 Then
+                         CNN.rsCmdStdxNoParte.Close
+                    End If
+                    If Weekday(Fecha) = 2 Then
+                         CNN.CmdStdxNoParte (Fecha - 2), (CodLinea), (Turno)
+                    Else
+                         CNN.CmdStdxNoParte (Fecha), (CodLinea), (Turno)
+                    End If
+                    If CNN.rsCmdStdxNoParte.EOF <> True Then
+
+                         IdJC_TM2_5 = CNN.rsCmdStdxNoParte!Oma_Id
+                         PzsxMinuto = (CNN.rsCmdStdxNoParte!pzsxhora / 60)
+                         CicloxPzs = (60 / PzsxMinuto)
+                         TiempoCicloxPzsx2_5 = (CicloxPzs * 2.5)
+                         FraccionTiempo_2_5 = (((TiempoCicloxPzsx2_5) / 1440) / 60)
+             '''            TmrColores.Interval = ((TiempoCicloxPzsx2_5 - 1) * 1000)
+'                         If Len(frmDigIn.LblVariables.Text) > 2000 Then
+'                              frmDigIn.LblVariables.Text = ""
+'                         End If
+'                    Else
+'                         FraccionTiempo_2_5 = 0.00014 '(((TiempoCicloxPzsx2_5) / 1440) / 60)
+
+                    End If
+          End If
+          CNN.rsCmdStdxNoParteAT.Close
+End If
+If CNN.rsCmdStdxNoParte.State = 1 Then
+     CNN.rsCmdStdxNoParte.Close
+End If
+
+'frmDigIn.LblVariables.Text = frmDigIn.LblVariables.Text & vbNewLine & "NoParte: " & NoParte & vbNewLine
+
+AlertaSupervisor = 0
+AlertaGerenteProd = 0
+AlertaDirector = 0
+
+'''CNN.CmdTiempoAlertasParo ("Flat"), ("AlertaSupervisor")
+'''If CNN.rsCmdTiempoAlertasParo.EOF <> True Then
+'''    AlertaSupervisor = CNN.rsCmdTiempoAlertasParo!Mimutos / 1440
+'''
+''' ''  Alerta = CNN.rsCmdTiempoAlertasParo!Mimutos / 1440
+'''
+'''Else
+'''    AlertaSupervisor = 0
+'''End If
+'''CNN.rsCmdTiempoAlertasParo.Close
+
+AlertaSupervisor = (FraccionTiempo_2_5 * 2)
+
+Call TurnoL
+Call Horarios
+
+' 32:Corte Cuadros
+'31: lavado
+IdOperacion = 31
+
+
+SQL = "  SELECT TOP 10 Tbl_DetOma.IDENTITYCOL, Tbl_DetOma.Oma_Id,"
+SQL = SQL & "      Tbl_DetOma.IdHorario, Tbl_DetOma.HoraIni, Tbl_DetOma.HoraFin,"
+SQL = SQL & "      Tbl_DetOma.CodVidrio, Tbl_DetOma.PzsOK, Tbl_DetOma.FechaCap,"
+SQL = SQL & "      Tbl_DetOma.HoraCap, Tbl_DetOma.Observaciones, Tbl_DetOma.Item,"
+SQL = SQL & "      TblHorariosHxH.Turno, Tbl_DetOma.IdOperacion,"
+SQL = SQL & "      lineas.descripcion"
+SQL = SQL & "  FROM Tbl_DetOma INNER JOIN"
+SQL = SQL & "      TblHorariosHxH ON"
+SQL = SQL & "      Tbl_DetOma.IdHorario = TblHorariosHxH.IdHorario INNER JOIN"
+SQL = SQL & "      Orden_Man ON"
+SQL = SQL & "      Tbl_DetOma.Oma_Id = Orden_Man.Oma_Id INNER JOIN"
+SQL = SQL & "      lineas ON Orden_Man.Codlinea = lineas.codlinea"
+SQL = SQL & "  WHERE (Tbl_DetOma.FechaCap = CONVERT(DATETIME,"
+SQL = SQL & "      '" & Year(Fecha) & "-" & Month(Fecha) & "-" & Day(Fecha) & " 00:00:00', 102)) AND (TblHorariosHxH.Turno = " & Turno & ") AND "
+SQL = SQL & "      (Tbl_DetOma.IdOperacion = IdOperacion) AND (lineas.descripcion LIKE N'%" & Mid(CodLinea, 1, 1) & "%')"
+SQL = SQL & "  ORDER BY Tbl_DetOma.IDENTITYCOL DESC, Tbl_DetOma.HoraFin DESC"
+
+'''MsgBox SQL
+
+If CNN.rsCmdUltimoConteoxJC.State = 1 Then
+      CNN.rsCmdUltimoConteoxJC.Close
+End If
+
+
+UltimoConteo = ""
+
+'Tbl_detOma vs. tblHorariosHxH vx. Orden_Man Vs. Lineas
+CNN.rsCmdUltimoConteoxJC.Open SQL
+If CNN.rsCmdUltimoConteoxJC.EOF <> True Then
+      IdJC_TM = CNN.rsCmdUltimoConteoxJC!Oma_Id
+
+      UltimoConteo = CDate(CNN.rsCmdUltimoConteoxJC!FechaCap & " " & CNN.rsCmdUltimoConteoxJC!HoraFin)
+    '   If (Now >= CDate(CDate(CNN.rsCmdUltimoConteoxJC!FechaCap & " " & (CNN.rsCmdUltimoConteoxJC!horafin + AlertaSupervisor)))) Then '  0.003  = 5 minutos
+  '  If Now >= CDate(CDate((CSng(CDate(UltimoConteo)) + AlertaSupervisor))) Then '  0.003  = 5 minutos
+
+      If Now >= CDate(CDate((CDbl(CDate(UltimoConteo)) + AlertaSupervisor))) Then '  0.003  = 5 minutos
+
+    '   Resp = CSng(Now)
+  '     If CSng(Now) >= CSng(CDate(CNN.rsCmdUltimoConteoxJC!FechaCap & " " & CNN.rsCmdUltimoConteoxJC!horafin)) + AlertaSupervisor Then    '  0.003  = 5 minutos
+               ColorAlerta = &HFFFF&         ''Amarillo
+         '     Call Timer1_Timer
+               'Call SendAlert
+                  ''If UltimoConteo <= (CDate(CNN.rsCmdUltimoConteoxJC!FechaCap & " " & CNN.rsCmdUltimoConteoxJC!horafin + AlertaSupervisor)) Then
+                  Resp = (CDbl(CDate(CNN.rsCmdUltimoConteoxJC!FechaCap & " " & CNN.rsCmdUltimoConteoxJC!HoraFin) + AlertaSupervisor))
+                  Dim FechaCompara As Date
+                  If CDbl(Time) > 0 And CDbl(Time) < 0.302083 Then    'Es tercer turno
+                         FechaCompara = Fecha + 1
+                  Else
+                         FechaCompara = Fecha
+                  End If
+
+                  If (CDbl(CDate(CNN.rsCmdUltimoConteoxJC!FechaCap & " " & CNN.rsCmdUltimoConteoxJC!HoraFin) + AlertaSupervisor)) < CDbl(CDate(FechaCompara & " " & Time)) Then   'Now Then
+                        If IdTM = 0 Then
+                              Call MAxTM
+                        Else
+                              CNN.CmdTiempoMuerto (IdTM)
+                              If CNN.rsCmdTiempoMuerto.EOF <> True Then
+                                      If CNN.rsCmdTiempoMuerto!Turno <> Turno Then        ' Se termino el turno genera nuevo TM
+                                          CNN.rsCmdTiempoMuerto.Close
+                                          CNN.rsCmdUltimoConteoxJC.Close
+
+                                          UltimoConteo = Now
+                                          Call MAxTM
+                                          Exit Sub
+                                      Else
+                                                If CNN.rsCmdTiempoMuerto!IdHorario <> IdHorario Then        ' Se termino el turno genera nuevo TM
+                                                   CNN.rsCmdTiempoMuerto.Close
+                                                   UltimoConteo = Now
+                                                    Call MAxTM
+                                                     If CNN.rsCmdTiempoMuerto.State = 1 Then
+                                                            CNN.rsCmdTiempoMuerto.Close
+                                                    End If
+                                                    If CNN.rsCmdUltimoConteoxJC.State = 1 Then
+                                                            CNN.rsCmdUltimoConteoxJC.Close
+                                                    End If
+                                                    Exit Sub
+                                                Else
+                                                        CNN.rsCmdTiempoMuerto!hor_fin = Now              'Time
+                                                        CNN.rsCmdTiempoMuerto!Minutos = Format(((CNN.rsCmdTiempoMuerto!hor_fin - CNN.rsCmdTiempoMuerto!hor_ini) * 1440), "0.00")
+'                                                        frmDigIn.LblVariables.Text = frmDigIn.LblVariables.Text & vbNewLine & "Update TM Mins: " & CNN.rsCmdTiempoMuerto!Minutos & "   " & Now & vbNewLine
+                                                        If (CNN.rsCmdTiempoMuerto!Minutos >= 2 And CNN.rsCmdTiempoMuerto!IDParo = 999) Then
+                                                                 CNN.rsCmdTiempoMuerto!IDParo = 0
+                                                        End If
+                                                        Me.FreLinea(2).Caption = DescLinea & "                TM ."
+                                                    CNN.rsCmdTiempoMuerto.Update
+                                                End If
+                                      End If
+                              End If
+                              CNN.rsCmdTiempoMuerto.Close
+                        End If
+                  End If
+       End If
+Else
+      ''' Sino la encuentra busca en el programa
+      '  (dbo.Schedule_Lineas.CodLinea = ?) AND (dbo.Schedule_Lineas.Fecha = ?) AND (dbo.Schedule_Lineas.IdHora = ?)
+End If
+CNN.rsCmdUltimoConteoxJC.Close
+End Sub
+
+

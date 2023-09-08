@@ -1,0 +1,52 @@
+Private Sub cmdAgregarDet_Click()
+Dim resp As Integer
+Dim i, n As Integer
+Dim Bandrep As Boolean
+
+
+                For i = 1 To Me.msfVisitantes.Rows - 1
+                    If Me.msfNombres.TextMatrix(n, 0) = Me.msfVisitantes.TextMatrix(i, 3) Then
+                        MsgBox ("Ya existe un registro con este dato:" & vbCrLf & Me.msfNombres.TextMatrix(n, 1)), vbInformation
+                        Bandrep = True
+                    End If
+                Next i
+
+              'Buscar repetido en Bitacora
+             deVigilancia.cmdRepetido Me.dtpFechaP, Me.dtpHoraaP, Me.msfNombres.TextMatrix(n, 0)
+
+               If deVigilancia.rscmdRepetido.RecordCount > 0 Then
+                   MsgBox ("Ya existe un registro con esos datos" & vbCrLf & Me.msfNombres.TextMatrix(i, 1)), vbInformation
+               Bandrep = True
+               End If
+
+                If Bandrep = False Then
+                   Me.msfVisitantes.AddItem Format(Me.dtpFechaP.Value, "dd-mm-yyyy")
+                    Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 1) = Format(Me.dtpHoraaP.Value, "H:MM AMPM")
+
+                       deVigilancia.cmdIdProv Me.cboProvedor.Text
+
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 2) = deVigilancia.rscmdIdProv!Ind_Idprov
+                      deVigilancia.rscmdIdProv.Close
+
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 3) = Me.msfNombres.TextMatrix(n, 0) 'IdVisit
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 4) = Me.cboProvedor.Text 'Id
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 5) = Me.msfNombres.TextMatrix(n, 1) '
+
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 6) = Me.cboTipoVisit.Text
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 7) = DescDpto
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 8) = Nombre
+                      Me.msfVisitantes.TextMatrix(msfVisitantes.Rows - 1, 9) = Me.txtObserv
+                   msfVisitantes.Row = msfVisitantes.Rows - 1
+                   End If
+
+              deVigilancia.rscmdRepetido.Close
+
+             Next n
+            End If
+
+
+
+
+
+End Sub
+

@@ -1,0 +1,604 @@
+Private Sub CmdAsignarMPMan_Click()
+Dim BandTinta As Boolean
+
+If i <> 0 Then
+    If Me.LstReq.SelectedItem.Index > (ii - 1) Then
+        MsgBox "seleccione un renglon con datos", vbCritical, MSG
+        Exit Sub
+    End If
+    
+    If Me.LstReq.SelectedItem.ListSubItems(9).Text = "" Then
+        MsgBox "No hay existencias de MP en el almacen para poder generar la JC", vbCritical, MSG
+        Exit Sub
+    End If
+    
+    If Me.LstReq.SelectedItem.ListSubItems(10).Text = "" Then
+        MsgBox "Este numero de parte no tiene definida la Materia prima ideal.", vbCritical, MSG
+        Exit Sub
+    End If
+    If Me.LstReq.SelectedItem.ListSubItems(8).Text = "Sin Def" Then
+        MsgBox "Este numero de parte no tiene definido el Standar Pack.", vbCritical, MSG
+        Exit Sub
+    End If
+    
+
+    
+    If Len(Me.LstReq.SelectedItem.ListSubItems(1).Text) > 0 And Me.LstReq.SelectedItem.ListSubItems(11).Text <> "Si" Then
+        Resp = MsgBox("¿Desea elaborar una Jobcard de Acumulado para el numero de parte: " & Me.LstReq.SelectedItem.ListSubItems(5).Text & "?", vbYesNo, MSG)
+        If Resp = 7 Then
+            Exit Sub
+        End If
+                'Mensaje: lleva serigrafia y pantallas
+                CNN.CmdCM Me.LstReq.SelectedItem.ListSubItems(4).Text
+                    Do While CNN.rsCmdCM.EOF = False
+                    If CNN.rsCmdCM!cmat_tipomp = "T" Then BandTinta = True
+                        Resp = CNN.rsCmdCM!cmat_cant
+                    CNN.rsCmdCM.MoveNext
+                    Loop
+                    
+                    CNN.rsCmdCM.Close
+                    
+                    If BandTinta = True Then
+                        Resp = MsgBox("El numero de parte: " & Me.LstReq.SelectedItem.ListSubItems(5).Text & " lleva Serigrafia " + vbCrLf _
+                        & "El numero de parte: " & Me.LstReq.SelectedItem.ListSubItems(5).Text & " lleva Serigrafia " + vbCrLf _
+                        & "¿Desea continuar?", vbYesNo + vbInformation)
+            
+          
+            
+            If Resp = 7 Then
+                Exit Sub
+            End If
+        End If
+        Tipo = "F"
+        Codigo = Me.LstReq.SelectedItem.ListSubItems(9).Text
+        PxH = Me.LstReq.SelectedItem.ListSubItems(10).Text
+        OF = Me.LstReq.SelectedItem.ListSubItems(4).Text
+        NoParte = Me.LstReq.SelectedItem.ListSubItems(5).Text
+        cant = Me.LstReq.SelectedItem.ListSubItems(7).Text
+        
+        
+        
+        '#
+        Resp = InputBox("Determine la cantidad de Piezas de Acumulado para el numero de parte: " & NoParte, MSG, cant)
+        
+        If IsNumeric(Resp) Then
+            If Resp > 0 Then
+                Cantidad = Resp
+                'Me.LstReq.SelectedItem.ListSubItems(7).Text = Cantidad
+            Else
+                MsgBox "Los datos no son correctos, solo cantidades positivas.", vbInformation, MSG
+                Exit Sub
+            End If
+        Else
+            MsgBox "Los datos no son correctos, solo numeros.", vbInformation, MSG
+            Exit Sub
+        End If
+        Cadena = ""
+        SumPzs = 0
+        NoCajas = 0
+        If OF = "M21418" Or OF = "M21346" Or OF = "M20952" Then
+            OF = OF
+        End If
+        'RUTA:    Vidrio
+        CNN.CmdVidrio (Codigo)
+        If CNN.rsCmdVidrio.EOF <> True Then 'Busca Tickets Vidrio
+            SumVidrio = 0
+            XVid = CNN.rsCmdVidrio!x
+            YVid = CNN.rsCmdVidrio!y
+            If CNN.rsCmdDetPKL.State = 1 Then
+                CNN.rsCmdDetPKL.Close
+            End If
+            ExistenciaMP = CNN.rsCmdVidrio!Existencia - CNN.rsCmdVidrio!reservado
+            If ExistenciaMP <= 0 Then
+                ExistenciaMP = 0
+                Resp = MsgBox("NO hay existencias para la materia prima: " & Codigo & " ¿Desea Continuar? ", vbYesNo + vbInformation, MSG)
+                If Resp = 7 Then
+                    CNN.rsCmdVidrio.Close
+                    Exit Sub
+                End If
+            End If
+            For n = 0 To 20
+                VStd(1, n) = ""
+                VStd(2, n) = ""
+            Next n
+                       
+            
+            
+            CNN.CmdStdPackFlat (OF)
+            If CNN.rsCmdStdPackFlat.EOF <> True Then
+                If CNN.rsCmdStdPackFlat.RecordCount > 1 Then
+                    MsgBox "Existen mas de una unidad de empaque, seleccione por favor la distribucion.", vbInformation, MSG
+                    CNN.rsCmdStdPackFlat.Close
+                    FrmStdPack.Show 1
+                    If Len(Cadena) <> 0 Then
+                        NoCajas = SumCajas
+                        SumPzs = SumPzs
+                    End If
+                Else
+                    StdPack = CInt(Me.LstReq.SelectedItem.ListSubItems(8).Text)
+                    Resp = Cantidad
+                    NoCajas = 0
+                    Do While Resp > 0
+                        Resp = Val(Resp) - StdPack
+                        NoCajas = NoCajas + 1
+                    Loop
+                    SumPzs = CLng(NoCajas) * StdPack
+                    CNN.rsCmdStdPackFlat.Close
+                End If
+            Else
+                CNN.rsCmdStdPackFlat.Close
+            End If
+            
+            
+            SumPzs = Cantidad
+            
+            
+            If (ExistenciaMP * PxH) < SumPzs Then
+                If ExistenciaMP <> 0 Then
+                    cant = ExistenciaMP * PxH
+                Else
+                    cant = 0
+                End If
+                Resp = MsgBox("No hay Materia Prima suficiente del Vidrio " & Codigo & " para producir el numero de parte: " & NoParte & vbNewLine & "Solo se cubren: " & cant & " Pzs de Producto Terminado con la materia prima existente (" & ExistenciaMP & " pzs) y se requieren " & (SumPzs / PxH) & " pzs." & vbNewLine & vbNewLine & "¿Desea Continuar?", vbYesNo + vbCritical, MSG)
+                If Resp = 7 Then
+                    GoTo Salir
+                End If
+            End If
+
+            CNN.rsCmdMaxOma.Open                 'Genera JC
+            If IsNumeric(CNN.rsCmdMaxOma!m) Then
+                IdJC = CNN.rsCmdMaxOma!m + 1
+            Else
+                IdJC = 1000000
+            End If
+            'RUTA: 
+            CNN.rsCmdMaxOma.Close
+            CNN.CmdEncOma (IdJC)
+            If CNN.rsCmdEncOma.EOF = True Then
+                CNN.rsCmdEncOma.AddNew
+                    CNN.rsCmdEncOma!Oma_Id = IdJC
+                    CNN.rsCmdEncOma!oma_tipo = "PTV" 'Elaborada
+                    CNN.rsCmdEncOma!CodMaquina = 0
+                    CNN.rsCmdEncOma!Mol_Id = 0
+                    CNN.rsCmdEncOma!CodLinea = 0
+                    CNN.rsCmdEncOma!codturno = 0
+                    CNN.rsCmdEncOma![OF] = OF
+                    CNN.rsCmdEncOma!Oma_pza_prog = SumPzs 'NoCajas * StdPack
+                    CNN.rsCmdEncOma!oma_pza_prod = 0
+                    CNN.rsCmdEncOma!Oma_prior = 0
+                    CNN.rsCmdEncOma!oma_observ = Cadena
+                    CNN.rsCmdEncOma!oma_fechac = Date
+                    CNN.rsCmdEncOma!oma_horacap = Time
+                    CNN.rsCmdEncOma!oma_fechaini = F_Ini
+                    CNN.rsCmdEncOma!oma_fechafin = F_Ini
+                    CNN.rsCmdEncOma!oma_utimeMin = 0
+                    CNN.rsCmdEncOma!oma_TMmin = 0
+                    CNN.rsCmdEncOma!Oma_Status = "Activa"
+                    CNN.rsCmdEncOma!oma_pza_Lib = 0
+                    CNN.rsCmdEncOma!Oma_hini = Time
+                    CNN.rsCmdEncOma!Oma_hfin = Time
+                    CNN.CmdBuscaEsp2 (OF)
+                    If CNN.rsCmdBuscaEsp2.EOF <> True Then
+                        XEsp = CNN.rsCmdBuscaEsp2!x
+                        YEsp = CNN.rsCmdBuscaEsp2!y
+                    End If
+                    CNN.rsCmdBuscaEsp2.Close
+                    CNN.rsCmdEncOma!oma_pjedes = 1 - ((((XEsp * YEsp) / 1000000) * (SumPzs)) / ((((XVid * YVid) / 1000000) / PxH) * (SumPzs)))
+                    CNN.rsCmdEncOma!oma_mt2des = (((((XVid * YVid) / 1000000) / PxH) * (SumPzs)) - (((XEsp * YEsp) / 1000000) * (SumPzs)))
+                    CNN.rsCmdEncOma!oma_mt2prod = (((XEsp * YEsp) / 1000000) * (SumPzs))
+                    CNN.rsCmdEncOma!oma_mt2MP = (((XVid * YVid) / 1000000) * (SumPzs) / PxH)
+                    CNN.rsCmdEncOma!oma_pzaxhoja = PxH
+                    CNN.rsCmdEncOma!oma_pzaxmp = ((SumPzs) / PxH)
+                    CNN.rsCmdEncOma!EmpleadoId = EmpleadoId
+                    CNN.rsCmdEncOma!PC = PC
+                    CNN.rsCmdEncOma!oma_NoCajas = NoCajas
+                    CNN.rsCmdEncOma!CodVidrio = Codigo
+                    CNN.rsCmdEncOma!CodVidrioSelect = Codigo
+                    
+                CNN.rsCmdEncOma.Update
+                
+                'BitJC
+                Status = "Activa"
+                Call BitJC
+                    
+                
+                '''Call HacerFolios
+                
+               ''' Call PrevioNoCajas
+                
+                Call AsignaJCPed
+                Me.LstReq.SelectedItem.ListSubItems(11).Text = "Si"
+                Me.LstReq.ListItems.Remove (Me.LstReq.SelectedItem.Index)
+                ii = ii - 1
+                Me.LstReq.Refresh
+                m = 1
+                Do While Len(Me.LstReq.ListItems.Item(m).SubItems(1)) <> 0
+                    Me.LstReq.ListItems.Item(m).SubItems(1) = m
+                    m = m + 1
+                Loop
+                'Asigna JC a Ped
+            Else
+                MsgBox "La JC ya existe:" & IdJC, vbCritical, MSG
+            End If
+            CNN.rsCmdEncOma.Close
+            
+            
+''''            'Afecta Mat Asig Vidrio
+''''            CNN.rsCmdVidrio!reservado = CNN.rsCmdVidrio!reservado + (SumPzs / PxH)
+            
+            
+            
+            CNN.rsCmdVidrio.Update
+        Else
+            MsgBox "El Codigo de vidrio no existe", vbExclamation, MSG
+        End If
+Salir:
+        CNN.rsCmdVidrio.Close
+        LLenarJC
+    Else
+        If Me.LstReq.SelectedItem.ListSubItems(11).Text = "Si" Then
+            MsgBox "el numero de parte: " & Me.LstReq.SelectedItem.ListSubItems(5).Text & " ya fue elaborada su JC", vbExclamation, MSG
+        End If
+    End If
+End If
+
+
+
+'''Y ahora sin reservar Tickets
+'''''''''''If i <> 0 Then
+'''''''''''
+'''''''''''    If Me.LstReq.SelectedItem.Index > (ii - 1) Then
+'''''''''''        MsgBox "seleccione una renglon con datos", vbCritical, MSG
+'''''''''''        Exit Sub
+'''''''''''    End If
+'''''''''''
+'''''''''''    If Me.LstReq.SelectedItem.ListSubItems(10).Text = "" Then
+'''''''''''        MsgBox "Este numero de parte no tiene definida la Materia prima ideal.", vbCritical, MSG
+'''''''''''        Exit Sub
+'''''''''''    End If
+'''''''''''
+'''''''''''
+'''''''''''    If Len(Me.LstReq.SelectedItem.ListSubItems(1).Text) > 0 And Me.LstReq.SelectedItem.ListSubItems(11).Text <> "Si" Then
+'''''''''''        Resp = MsgBox("Esta a punto de reservar los requerimientos para el nuemero de parte " & Me.LstReq.SelectedItem.ListSubItems(5).Text & ", Elaborar de manera automatica los Folios de Producto Terminado " & vbNewLine & "y Reservar las Materias Primas." & vbNewLine & vbNewLine & "¿Realmente desea hacer esta operación?", vbYesNo, MSG)
+'''''''''''        If Resp = 7 Then
+'''''''''''            Exit Sub
+'''''''''''        End If
+'''''''''''        Tipo = "F"
+'''''''''''        Codigo = Me.LstReq.SelectedItem.ListSubItems(9).Text
+'''''''''''        PxH = Me.LstReq.SelectedItem.ListSubItems(10).Text
+'''''''''''        OF = Me.LstReq.SelectedItem.ListSubItems(4).Text
+'''''''''''        NoParte = Me.LstReq.SelectedItem.ListSubItems(5).Text
+'''''''''''        Cant = Me.LstReq.SelectedItem.ListSubItems(7).Text
+'''''''''''        Resp = InputBox("Detrmine la cantidad de Piezas de producto terminado para el numero de parte: " & NoParte, MSG, Cant)
+'''''''''''        If IsNumeric(Resp) Then
+'''''''''''            If Resp > 0 Then
+'''''''''''                Cantidad = Resp
+'''''''''''                'Me.LstReq.SelectedItem.ListSubItems(7).Text = Cantidad
+'''''''''''            Else
+'''''''''''                MsgBox "Los datos no son correctos, solo cantidades positivas.", vbInformation, MSG
+'''''''''''                Exit Sub
+'''''''''''            End If
+'''''''''''        Else
+'''''''''''            MsgBox "Los datos no son correctos, solo numeros.", vbInformation, MSG
+'''''''''''            Exit Sub
+'''''''''''        End If
+'''''''''''        Cadena = ""
+'''''''''''        SumPzs = 0
+'''''''''''        NoCajas = 0
+'''''''''''        If OF = "M21418" Or OF = "M21346" Or OF = "M20952" Then
+'''''''''''            OF = OF
+'''''''''''        End If
+'''''''''''        CNN.CmdVidrio (Codigo)
+'''''''''''        If CNN.rsCmdVidrio.EOF <> True Then 'Busca Tickets Vidrio
+'''''''''''            SumVidrio = 0
+'''''''''''            XVid = CNN.rsCmdVidrio!X
+'''''''''''            YVid = CNN.rsCmdVidrio!Y
+'''''''''''            If CNN.rsCmdDetPKL.State = 1 Then
+'''''''''''                CNN.rsCmdDetPKL.Close
+'''''''''''            End If
+'''''''''''            CNN.CmdDetPKL (Codigo)
+'''''''''''            If CNN.rsCmdDetPKL.EOF <> True Then
+'''''''''''                Do While CNN.rsCmdDetPKL.EOF <> True
+'''''''''''                    SumVidrio = SumVidrio + CNN.rsCmdDetPKL!Cantidad
+'''''''''''                    CNN.rsCmdDetPKL.MoveNext
+'''''''''''                Loop
+'''''''''''                CNN.rsCmdDetPKL.MoveFirst
+'''''''''''
+'''''''''''                For n = 0 To 20
+'''''''''''                    VStd(1, n) = ""
+'''''''''''                    VStd(2, n) = ""
+'''''''''''                Next n
+'''''''''''
+'''''''''''                CNN.CmdStdPackFlat (OF)
+'''''''''''                If CNN.rsCmdStdPackFlat.EOF <> True Then
+'''''''''''                    If CNN.rsCmdStdPackFlat.RecordCount > 1 Then
+'''''''''''                        MsgBox "Existen mas de una unidad de empaque, seleccione por favor la distribucion.", vbInformation, MSG
+'''''''''''                        CNN.rsCmdStdPackFlat.Close
+'''''''''''                        FrmStdPack.Show 1
+'''''''''''                        If Len(Cadena) <> 0 Then
+'''''''''''                            NoCajas = SumCajas
+'''''''''''                            SumPzs = SumPzs
+'''''''''''                        End If
+'''''''''''                    Else
+'''''''''''                        StdPack = CInt(Me.LstReq.SelectedItem.ListSubItems(8).Text)
+'''''''''''                        Resp = Cantidad
+'''''''''''                        NoCajas = 0
+'''''''''''                        Do While Resp > 0
+'''''''''''                            Resp = Val(Resp) - StdPack
+'''''''''''                            NoCajas = NoCajas + 1
+'''''''''''                        Loop
+'''''''''''                        SumPzs = CLng(NoCajas) * StdPack
+'''''''''''                        CNN.rsCmdStdPackFlat.Close
+'''''''''''                    End If
+'''''''''''                Else
+'''''''''''                    CNN.rsCmdStdPackFlat.Close
+'''''''''''                End If
+'''''''''''
+'''''''''''                If (SumVidrio * PxH) < SumPzs Then
+'''''''''''                    If SumVidrio <> 0 Then
+'''''''''''                        Cant = SumVidrio * PxH
+'''''''''''                    Else
+'''''''''''                        Cant = 0
+'''''''''''                    End If
+'''''''''''                    Resp = MsgBox("No hay Materia Prima suficiente del Vidrio " & Codigo & " para producir el numero de parte: " & NoParte & vbNewLine & "Solo se cubren: " & Cant & " Pzs de Producto Terminado, con la materia prima existente (" & SumVidrio & " pzs)" & vbNewLine & vbNewLine & "¿Desea Continuar?", vbYesNo + vbCritical, MSG)
+'''''''''''                    If Resp = 7 Then
+'''''''''''                        GoTo Salir
+'''''''''''                    End If
+'''''''''''                End If
+'''''''''''               '' If (CNN.rsCmdVidrio!Existencia - CNN.rsCmdVidrio!Mat_asig) = SumVidrio Then
+'''''''''''                    CNN.rsCmdMaxOma.Open                 'Genera JC
+'''''''''''                    If IsNumeric(CNN.rsCmdMaxOma!m) Then
+'''''''''''                        IdJC = CNN.rsCmdMaxOma!m + 1
+'''''''''''                    Else
+'''''''''''                        IdJC = 1000000
+'''''''''''                    End If
+'''''''''''                    CNN.rsCmdMaxOma.Close
+'''''''''''                    CNN.CmdEncOma (IdJC)
+'''''''''''                    If CNN.rsCmdEncOma.EOF = True Then
+'''''''''''                        CNN.rsCmdEncOma.AddNew
+'''''''''''                            CNN.rsCmdEncOma!OMA_ID = IdJC
+'''''''''''                            CNN.rsCmdEncOma!oma_tipo = "PTV" 'Elaborada
+'''''''''''                            CNN.rsCmdEncOma!CodMaquina = 0
+'''''''''''                            CNN.rsCmdEncOma!mol_Id = 0
+'''''''''''                            CNN.rsCmdEncOma!CodLinea = 0
+'''''''''''                            CNN.rsCmdEncOma!codturno = 1
+'''''''''''                            CNN.rsCmdEncOma![OF] = OF
+'''''''''''                            CNN.rsCmdEncOma!Oma_pza_prog = SumPzs 'NoCajas * StdPack
+'''''''''''                            CNN.rsCmdEncOma!oma_pza_prod = 0
+'''''''''''                            CNN.rsCmdEncOma!Oma_prior = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_observ = Cadena
+'''''''''''                            CNN.rsCmdEncOma!oma_fechac = Date
+'''''''''''                            CNN.rsCmdEncOma!oma_horacap = Time
+'''''''''''                            CNN.rsCmdEncOma!oma_fechaini = F_Ini
+'''''''''''                            CNN.rsCmdEncOma!oma_fechafin = F_Ini
+'''''''''''                            CNN.rsCmdEncOma!oma_utimeMin = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_TMmin = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_status = "Activa"
+'''''''''''                            CNN.rsCmdEncOma!oma_pza_Lib = 0
+'''''''''''                            CNN.rsCmdEncOma!Oma_hini = Time
+'''''''''''                            CNN.rsCmdEncOma!Oma_hfin = Time
+'''''''''''                            CNN.CmdBuscaEsp2 (OF)
+'''''''''''                            If CNN.rsCmdBuscaEsp2.EOF <> True Then
+'''''''''''                                XEsp = CNN.rsCmdBuscaEsp2!X
+'''''''''''                                YEsp = CNN.rsCmdBuscaEsp2!Y
+'''''''''''                            End If
+'''''''''''                            CNN.rsCmdBuscaEsp2.Close
+'''''''''''                            Resp = (1 - ((((XEsp * YEsp) / 1000000) * (SumPzs)) / ((((XVid * YVid) / 1000000) / PxH) * (SumPzs))))
+'''''''''''                            CNN.rsCmdEncOma!oma_pjedes = 1 - ((((XEsp * YEsp) / 1000000) * (SumPzs)) / ((((XVid * YVid) / 1000000) / PxH) * (SumPzs)))
+'''''''''''                            Resp = (((((XVid * YVid) / 1000000) / PxH) * (SumPzs)) - (((XEsp * YEsp) / 1000000) * (SumPzs)))
+'''''''''''                            CNN.rsCmdEncOma!oma_mt2des = (((((XVid * YVid) / 1000000) / PxH) * (SumPzs)) - (((XEsp * YEsp) / 1000000) * (SumPzs)))
+'''''''''''                            Resp = (((XEsp * YEsp) / 1000000) * (SumPzs))
+'''''''''''                            CNN.rsCmdEncOma!oma_mt2prod = (((XEsp * YEsp) / 1000000) * (SumPzs))
+'''''''''''                            Resp = (((XVid * YVid) / 1000000) * (SumPzs) / PxH)
+'''''''''''                            CNN.rsCmdEncOma!oma_mt2MP = (((XVid * YVid) / 1000000) * (SumPzs) / PxH)
+'''''''''''                            CNN.rsCmdEncOma!oma_pzaxhoja = PxH
+'''''''''''                            CNN.rsCmdEncOma!oma_pzaxmp = ((SumPzs) / PxH)
+'''''''''''                            CNN.rsCmdEncOma!EmpleadoId = EmpleadoId
+'''''''''''                            CNN.rsCmdEncOma!PC = PC
+'''''''''''                            CNN.rsCmdEncOma!oma_NoCajas = NoCajas
+'''''''''''                        CNN.rsCmdEncOma.Update
+'''''''''''                        Call HacerFolios
+'''''''''''                        '''Call PrevioNoCajas
+'''''''''''                        Call AsignaJCPed
+'''''''''''                        Me.LstReq.SelectedItem.ListSubItems(11).Text = "Si"
+'''''''''''                        Me.LstReq.ListItems.Remove (Me.LstReq.SelectedItem.Index)
+'''''''''''                        ii = ii - 1
+'''''''''''                        Me.LstReq.Refresh
+'''''''''''                        m = 1
+'''''''''''                        Do While Len(Me.LstReq.ListItems.Item(m).SubItems(1)) <> 0
+'''''''''''                            Me.LstReq.ListItems.Item(m).SubItems(1) = m
+'''''''''''                            m = m + 1
+'''''''''''                        Loop
+'''''''''''                        'Asigna JC a Ped
+'''''''''''                    Else
+'''''''''''                        MsgBox "La JC ya existe:" & IdJC, vbCritical, MSG
+'''''''''''                    End If
+'''''''''''                    CNN.rsCmdEncOma.Close
+'''''''''''                    SumVidrio = 0
+'''''''''''                    'Reserva Tickets Vidrio
+'''''''''''                    Band = False
+'''''''''''                    Do While Band = False And CNN.rsCmdDetPKL.EOF <> True
+'''''''''''                            'Genera JC Det
+'''''''''''                            CNN.CmdMaxDetOma (IdJC)
+'''''''''''                            If IsNumeric(CNN.rsCmdMaxDetOma!m) Then
+'''''''''''                                Detalle = CNN.rsCmdMaxDetOma!m + 1
+'''''''''''                            Else
+'''''''''''                                Detalle = 1
+'''''''''''                            End If
+'''''''''''                            CNN.rsCmdMaxDetOma.Close
+'''''''''''                            CNN.CmdDetOma (IdJC), (Detalle)
+'''''''''''                            If CNN.rsCmdDetOma.EOF = True Then
+'''''''''''                                CNN.rsCmdDetOma.AddNew
+'''''''''''                                    CNN.rsCmdDetOma!OMA_ID = IdJC
+'''''''''''                                    CNN.rsCmdDetOma!Item = Detalle
+'''''''''''                                    CNN.rsCmdDetOma!TipoMP = "V"
+'''''''''''                                    CNN.rsCmdDetOma!TicketGem = CNN.rsCmdDetPKL!TicketGem
+'''''''''''                                    CNN.rsCmdDetOma!doma_cant = CNN.rsCmdDetPKL!Cantidad
+'''''''''''                                    CNN.rsCmdDetOma!cantpt = 0
+'''''''''''                                    CNN.rsCmdDetOma!HoraIni = 0
+'''''''''''                                    CNN.rsCmdDetOma!HoraFin = 0
+'''''''''''                                    CNN.rsCmdDetOma!Observaciones = "Automatico"
+'''''''''''                                CNN.rsCmdDetOma.Update
+'''''''''''                            Else
+'''''''''''                                MsgBox "El detalle ya existe", vbCritical, MSG
+'''''''''''                            End If
+'''''''''''                            CNN.rsCmdDetOma.Close
+'''''''''''                            SumVidrio = SumVidrio + CNN.rsCmdDetPKL!Cantidad
+'''''''''''                            If (SumVidrio * PxH) >= SumPzs Then '(NoCajas * StdPack)
+'''''''''''                                Band = True
+'''''''''''                            End If
+'''''''''''                            CNN.rsCmdDetPKL!Status = "Reservado"
+'''''''''''                            CNN.rsCmdDetPKL!IdJC = IdJC
+'''''''''''                        CNN.rsCmdDetPKL.Update
+'''''''''''                        CNN.rsCmdDetPKL.MoveNext
+'''''''''''                    Loop
+'''''''''''                    'Afecta Mat Asig Vidrio
+'''''''''''              '      CNN.rsCmdVidrio!mat_asig = CNN.rsCmdVidrio!mat_asig + SumVidrio
+'''''''''''                    CNN.rsCmdVidrio.Update
+'''''''''''                    If (CNN.rsCmdDetPKL.EOF = True) And (Band = False) Then
+'''''''''''                        MsgBox "No se cubre la demanda de vidrio: " & Codigo & " para el No de parte: " & NoParte, vbCritical, MSG
+'''''''''''                        Resp = MsgBox("¿Desea elaborar una Desviación de MP para cubrir la demanda?", vbInformation + vbYesNo, MSG)
+'''''''''''                        If Resp = 6 Then
+'''''''''''                            'Elabora desviacion.
+'''''''''''                        End If
+'''''''''''                    End If
+'''''''''''                ''Else
+''''''''''''''                If (CNN.rsCmdVidrio!Existencia - CNN.rsCmdVidrio!Mat_asig) = SumVidrio Then
+''''''''''''''                    ''MsgBox "Hay Diferencias entre los Tickets y la Tabla de Vidrio para el codigo " & Codigo, vbCritical, MSG
+''''''''''''''                    CNN.rsCmdCorreo.Open      'manda correos
+''''''''''''''                        CNN.rsCmdCorreo.AddNew
+''''''''''''''                            CNN.rsCmdCorreo!De = "alejandro.gallegos@schott.com"
+''''''''''''''                            CNN.rsCmdCorreo!Para = "alejandro.gallegos@schott.com"
+''''''''''''''                            CNN.rsCmdCorreo!CC = "blas.reyes@schott.com, helios.ireta@schott.com" 'zahira.perez@schott.com, fernando.sotomayor@schott.com"
+''''''''''''''                            CNN.rsCmdCorreo!CCO = ""
+''''''''''''''                            CNN.rsCmdCorreo!Titulo = "Hay Diferencias entre los Tickets y la Tabla de Vidrio para el codigo " & Codigo & " <<Pruebas TI>>"
+''''''''''''''                            CNN.rsCmdCorreo!Mensaje = MSG & "<br><br>A la brevedad Revise las existencias para este codigo: " & Codigo & "<br>Por esta razón NO será incluido en la elaboracion de Job Cards " & Date & "  <br><br>Gracias."
+''''''''''''''                            CNN.rsCmdCorreo!aplicacion = "JC"
+''''''''''''''                            CNN.rsCmdCorreo!Prioridad = 1
+''''''''''''''                        CNN.rsCmdCorreo.Update
+''''''''''''''                    CNN.rsCmdCorreo.Close
+''''''''''''''                End If
+'''''''''''            Else
+'''''''''''                MsgBox "No hay MP en los tickets para el codigo " & Codigo, vbCritical, MSG
+'''''''''''                Resp = MsgBox("¿Desea elaborar la JC aun sin MP en el inventario?", vbInformation + vbYesNo, MSG)
+'''''''''''                If Resp = 6 Then
+'''''''''''                    If OF = "M21418" Or OF = "M21346" Or OF = "M20952" Then
+'''''''''''                        OF = OF
+'''''''''''                    End If
+'''''''''''                    NoCajas = 0
+'''''''''''                    CNN.CmdStdPackFlat (OF)
+'''''''''''                    If CNN.rsCmdStdPackFlat.EOF <> True Then
+'''''''''''                        If CNN.rsCmdStdPackFlat.RecordCount > 1 Then
+'''''''''''                            MsgBox "Existen mas de una unidad de empaque, seleccione por favor la distribucion.", vbInformation, MSG
+'''''''''''                            CNN.rsCmdStdPackFlat.Close
+'''''''''''                            For i = 1 To 20
+'''''''''''                                VStd(1, i) = ""
+'''''''''''                                VStd(2, i) = ""
+'''''''''''                            Next i
+'''''''''''
+'''''''''''                            FrmStdPack.Show 1
+'''''''''''                            If Len(Cadena) <> 0 Then
+'''''''''''                                NoCajas = SumCajas
+'''''''''''                                SumPzs = SumPzs
+'''''''''''                            End If
+'''''''''''                        Else
+'''''''''''                            StdPack = CInt(Me.LstReq.SelectedItem.ListSubItems(8).Text)
+'''''''''''                            NoCajas = 0
+'''''''''''                            Resp = Cantidad
+'''''''''''                            Do While Resp > 0
+'''''''''''                                Resp = Val(Resp) - StdPack
+'''''''''''                                NoCajas = NoCajas + 1
+'''''''''''                            Loop
+'''''''''''                            SumPzs = CLng(NoCajas) * StdPack
+'''''''''''                            CNN.rsCmdStdPackFlat.Close
+'''''''''''                        End If
+'''''''''''                    Else
+'''''''''''                        CNN.rsCmdStdPackFlat.Close
+'''''''''''                    End If
+'''''''''''
+'''''''''''                    CNN.rsCmdMaxOma.Open                 'Genera JC
+'''''''''''                    If IsNumeric(CNN.rsCmdMaxOma!m) Then
+'''''''''''                        IdJC = CNN.rsCmdMaxOma!m + 1
+'''''''''''                    Else
+'''''''''''                        IdJC = 1000000
+'''''''''''                    End If
+'''''''''''                    CNN.rsCmdMaxOma.Close
+'''''''''''                    CNN.CmdEncOma (IdJC)
+'''''''''''                    If CNN.rsCmdEncOma.EOF = True Then
+'''''''''''                        CNN.rsCmdEncOma.AddNew
+'''''''''''                            CNN.rsCmdEncOma!OMA_ID = IdJC
+'''''''''''                            CNN.rsCmdEncOma!oma_tipo = "PTV" 'Elaborada
+'''''''''''                            CNN.rsCmdEncOma!CodMaquina = 0
+'''''''''''                            CNN.rsCmdEncOma!mol_Id = 0
+'''''''''''                            CNN.rsCmdEncOma!CodLinea = 0
+'''''''''''                            CNN.rsCmdEncOma!codturno = 1
+'''''''''''                            CNN.rsCmdEncOma![OF] = OF
+'''''''''''                            CNN.rsCmdEncOma!Oma_pza_prog = SumPzs 'NoCajas * StdPack
+'''''''''''                            CNN.rsCmdEncOma!oma_pza_prod = 0
+'''''''''''                            CNN.rsCmdEncOma!Oma_prior = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_observ = Cadena
+'''''''''''                            CNN.rsCmdEncOma!oma_fechac = Date
+'''''''''''                            CNN.rsCmdEncOma!oma_horacap = Time
+'''''''''''                            CNN.rsCmdEncOma!oma_fechaini = F_Ini
+'''''''''''                            CNN.rsCmdEncOma!oma_fechafin = F_Ini
+'''''''''''                            CNN.rsCmdEncOma!oma_utimeMin = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_TMmin = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_status = "Activa"
+'''''''''''                            CNN.rsCmdEncOma!oma_pza_Lib = 0
+'''''''''''                            CNN.rsCmdEncOma!Oma_hini = Time
+'''''''''''                            CNN.rsCmdEncOma!Oma_hfin = Time
+'''''''''''                            CNN.CmdBuscaEsp2 (OF)
+'''''''''''                            If CNN.rsCmdBuscaEsp2.EOF <> True Then
+'''''''''''                                XEsp = CNN.rsCmdBuscaEsp2!X
+'''''''''''                                YEsp = CNN.rsCmdBuscaEsp2!Y
+'''''''''''                            End If
+'''''''''''                            CNN.rsCmdBuscaEsp2.Close
+'''''''''''                            CNN.rsCmdEncOma!oma_pjedes = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_mt2des = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_mt2prod = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_mt2MP = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_pzaxhoja = 0
+'''''''''''                            CNN.rsCmdEncOma!oma_pzaxmp = 0
+'''''''''''                            CNN.rsCmdEncOma!EmpleadoId = EmpleadoId
+'''''''''''                            CNN.rsCmdEncOma!PC = PC
+'''''''''''                            CNN.rsCmdEncOma!oma_NoCajas = NoCajas
+'''''''''''                        CNN.rsCmdEncOma.Update
+'''''''''''
+'''''''''''                        Call HacerFolios
+'''''''''''
+'''''''''''                        '''Call PrevioNoCajas
+'''''''''''                        Me.LstReq.SelectedItem.ListSubItems(11).Text = "Si"
+'''''''''''                        'Asigna JC a Ped
+'''''''''''                        Call AsignaJCPed
+'''''''''''
+'''''''''''                        Me.LstReq.ListItems.Remove (Me.LstReq.SelectedItem.Index)
+'''''''''''                        ii = ii - 1
+'''''''''''                        Me.LstReq.Refresh
+'''''''''''
+'''''''''''                         m = 1
+'''''''''''                        Do While Len(Me.LstReq.ListItems.Item(m).SubItems(1)) <> 0
+'''''''''''                            Me.LstReq.ListItems.Item(m).SubItems(1) = m
+'''''''''''                            m = m + 1
+'''''''''''                        Loop
+'''''''''''
+'''''''''''                    Else
+'''''''''''                        MsgBox "La JC ya existe:" & IdJC, vbCritical, MSG
+'''''''''''                    End If
+'''''''''''                    CNN.rsCmdEncOma.Close
+'''''''''''                End If
+'''''''''''            End If
+'''''''''''            CNN.rsCmdDetPKL.Close
+'''''''''''        Else
+'''''''''''            MsgBox "El Codigo de vidrio no existe", vbExclamation, MSG
+'''''''''''        End If
+'''''''''''Salir:
+'''''''''''        CNN.rsCmdVidrio.Close
+'''''''''''        LLenarJC
+'''''''''''    Else
+'''''''''''        If Me.LstReq.SelectedItem.ListSubItems(11).Text = "Si" Then
+'''''''''''            MsgBox "el numero de parte: " & Me.LstReq.SelectedItem.ListSubItems(5).Text & " ya fue elaborada su JC", vbExclamation, MSG
+'''''''''''        End If
+'''''''''''    End If
+'''''''''''End If
+End Sub
+

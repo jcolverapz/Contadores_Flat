@@ -1,0 +1,7 @@
+Private Sub CmdVariales_Click()
+If Me.Height = 1860 Then
+     Me.Height = 14025
+Else
+     Me.Height = 1860
+End If
+End Sub
