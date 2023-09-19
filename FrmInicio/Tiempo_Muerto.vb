@@ -1,7 +1,7 @@
 Private Sub TiempoMuerto()
 
 On Error GoTo ErrHandler
-
+'test
  ' Tiempo Muerto - TM
 
 'Tbl_DetOma Vs. Orden_Man Vs. TblHorariosHxH Vs. StdxLineaxHora
