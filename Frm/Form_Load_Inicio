@@ -1,0 +1,24 @@
+Private Sub Form_Load()
+'Frm Inicio
+TmrContadores.Enabled = False
+TmrGrafica.Enabled = False
+
+Call CmdVerContadores_Click
+
+'FrmGraficaWeb.Show
+
+'Call CmdVerGrafica_Click
+
+Me.WindowState = 1
+
+End Sub
+
+Private Sub CmdVerContadores_Click()
+
+FrmVisorContadores3Lineas.Show
+
+'TmrGrafica.Interval = 59000
+'TmrGrafica.Enabled = True
+'TmrContadores.Enabled = False
+
+End Sub
