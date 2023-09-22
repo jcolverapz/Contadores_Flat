@@ -177,7 +177,7 @@ If CNN.rsCmdUltimoConteoxJC.EOF <> True Then
                ' End If
                         'Si hay el tiempo Muerto
                         If IdTM = 0 Then
-                             ' Call MAxTM
+                              Call MAxTM
                         Else
                               CNN.CmdTiempoMuerto (IdTM)
                               If CNN.rsCmdTiempoMuerto.EOF <> True Then
