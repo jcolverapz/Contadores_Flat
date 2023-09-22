@@ -194,7 +194,6 @@ If CNN.rsCmdUltimoConteoxJC.EOF <> True Then
                                                 ' Se termino el Horario nuevo TM
                                                 If CNN.rsCmdTiempoMuerto!IdHorario <> IdHorario Then
                                                    CNN.rsCmdTiempoMuerto.Close
-                                                   CNN.rsCmdUltimoConteoxJC.Close
                                                    UltimoConteo = Now
                                                     Call MAxTM
                                                     ' If CNN.rsCmdTiempoMuerto.State = 1 Then

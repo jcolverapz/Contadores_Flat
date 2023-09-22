@@ -1,4 +1,4 @@
-  SELECT lineas.descripcion AS Linea, Maquina.Descricion AS Maquina,
+SELECT lineas.descripcion AS Linea, Maquina.Descricion AS Maquina,
     operaciones.descripcion AS Operacion,
     Orden_Man.Oma_Id AS JobCard, Tbl_DetOma.CodVidrio AS Vidrio,
     Tbl_DetOma.Ticketgem AS Ticket, Tbl_DetOma.PxH,
@@ -22,6 +22,4 @@ GROUP BY lineas.descripcion, Maquina.Descricion,
     lineas.codlinea, Tbl_DetOma.FechaCap, operaciones.codopera,
     Orden_Man.Codlinea, TblHorariosHxH.Turno,
     Orden_Man.Oma_pza_prog
-HAVING (TblHorariosHxH.Turno =  & Turno & )
-    AND (Tbl_DetOma.FechaCap = ' & Month(Fecha) & / & Day(Fecha) & / & Year(Fecha) & ') AND 
-   (lineas.codlinea = ' & CodLinea & ')
+HAVING (Orden_Man.Oma_Id =  & IdJC & )
